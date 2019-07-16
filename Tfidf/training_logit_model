@@ -1,0 +1,54 @@
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.externals import joblib
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+import jieba
+import pandas as pd
+import numpy as np
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import classification_report
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+
+
+def main():
+    df = pd.read_excel("aml_sample1.xlsx")
+    content_df = df["content"]
+    # jieba.load_userdict("./keyword_dict.txt")
+
+    cut_li = []
+    for i in range(len(content_df)):
+        content_li = list(jieba.cut(content_df[i]))
+        content = ' '.join(content_li)
+        cut_li.append(content)
+
+    transformer = TfidfVectorizer()
+    tfidf = transformer.fit_transform(cut_li)
+    # joblib.dump(transformer, "transformer_logic.pkl")
+
+    x_train, x_test, y_train, y_test = train_test_split(tfidf, df["type"], test_size=0.25, random_state=1)
+    logic = LogisticRegression()
+    logic.fit(x_train, y_train)
+    y_predict = logic.predict(x_test)
+
+    print(logic.score(x_test, y_test))
+    print(classification_report(y_test, y_predict, target_names=["0", "1"]))
+
+    keyword_list = transformer.get_feature_names()
+    coef_list = list(logic.coef_[0])
+    variable_li = []
+
+    for i in range(len(keyword_list)):
+        temp_li = [coef_list[i], keyword_list[i]]
+        variable_li.append(temp_li)
+
+    final_list = sorted(variable_li)
+    for i in final_list[-10:-1]:
+        print(i)
+
+    for j in final_list[0:10]:
+        print(j)
+
+
+main()
