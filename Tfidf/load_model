@@ -1,0 +1,30 @@
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.externals import joblib
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+import jieba
+import pandas as pd
+import numpy as np
+from sklearn.naive_bayes import MultinomialNB
+
+
+model = joblib.load("test.pkl")
+tf = joblib.load('transformer.pkl')
+df = pd.read_excel("aml_sample2.xlsx")
+test_list = []
+
+for i in range(len(df["content"])):
+    article = df["content"][i].replace("\n", "")
+    con1 = jieba.cut(article)
+    content1 = list(con1)
+    c1 = ' '.join(content1)
+    test_list.append(c1)
+
+X = tf.transform(test_list)
+result = model.predict(X)
+df["predict"] = result
+
+writer = pd.ExcelWriter('aml_result後半.xlsx')
+df.to_excel(writer, 'Sheet1')
+writer.save()
