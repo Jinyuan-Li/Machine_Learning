@@ -1,0 +1,38 @@
+import numpy as np
+import pandas as pd
+import jieba
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.externals import joblib
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import classification_report
+
+
+def main():
+    df = pd.read_excel("aml_sample1.xlsx")
+    content_df = df["content"]
+    # jieba.load_userdict("./keyword_dict.txt")
+
+    cut_li = []
+    for i in range(len(content_df)):
+        content_li = list(jieba.cut(content_df[i]))
+        content = ' '.join(content_li)
+        cut_li.append(content)
+
+    transformer = TfidfVectorizer()
+    tfidf = transformer.fit_transform(cut_li)
+    joblib.dump(transformer, "transformer.pkl")
+
+    x_train, x_test, y_train, y_test = train_test_split(tfidf, df["type"], test_size=0.25, random_state=1)
+    mlt = MultinomialNB(alpha=0.01)
+    mlt.fit(x_train, y_train)
+    joblib.dump(mlt, "test.pkl")
+    y_predict = mlt.predict(x_test)
+
+    print("預測準確率：", mlt.score(x_test, y_test))
+    print(classification_report(y_test, y_predict, target_names=['0', '1']))
+
+
+main()
