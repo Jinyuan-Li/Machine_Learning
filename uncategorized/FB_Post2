@@ -1,0 +1,69 @@
+import re
+import jieba
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+
+
+def main():
+    df = pd.read_excel(r"D:\OneDrive\文件\Analysis\FB\分析\20191227資料.xlsx", sheet_name='sklearn')
+    content_df = df["content"]
+    jieba.set_dictionary(r"D:\OneDrive\文件\Analysis\文字分析相關\dict\dict.txt.big.txt")
+    jieba.load_userdict(r"D:\OneDrive\文件\Analysis\文字分析相關\dict\user_dict.txt")
+    with open(r"D:\OneDrive\文件\Analysis\文字分析相關\dict\stop_words.txt", encoding="utf-8") as f:
+        stops = f.read().split('\n')
+
+    # jieba.cut(content_df[i],cut_all=0) # 精確(默認)
+    # jieba.cut(content_df[i],cut_all=1) # 全文
+    # jieba.cut_for_search(content_df[i]) # 搜尋引擎
+
+    cut_li = []
+    for i in range(len(content_df)):
+        content_li = re.sub(r'(https|http)?:\/\/(\w|\.|\/|\?|\=|\&|\%)*\b', '', content_df[i], flags=re.MULTILINE)
+        content_li = list(jieba.cut(content_li, cut_all=0))
+        content = ''
+        for words in content_li:
+            if words not in stops:
+                content += words
+                content += " "
+        cut_li.append(content)
+
+    transformer = TfidfVectorizer()
+    tfidf = transformer.fit_transform(cut_li)
+    # joblib.dump(transformer, "transformer_logic.pkl")
+
+    x_train, x_test, y_train, y_test = train_test_split(tfidf, df["shareg1"], test_size=0.25, random_state=1)
+    logic = LogisticRegression()
+    logic.fit(x_train, y_train)
+    y_predict = logic.predict(x_test)
+
+    print(logic.score(x_test, y_test))
+    print(classification_report(y_test, y_predict, target_names=["0", "1"]))
+
+    keyword_list = transformer.get_feature_names()
+    coef_list = list(logic.coef_[0])
+    variable_li = []
+
+    for i in range(len(keyword_list)):
+        temp_li = [coef_list[i], keyword_list[i]]
+        variable_li.append(temp_li)
+
+    print("正面：")
+    final_list = sorted(variable_li)
+    for i in final_list[-30:-1]:
+        print(i)
+    print("")
+    print("負面：")
+    for j in final_list[0:30]:
+        print(j)
+
+
+main()
